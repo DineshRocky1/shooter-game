@@ -3,17 +3,18 @@
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
 
+const scoreEl = document.querySelector('#scoreEl') // top left score
+const modalEl = document.querySelector('#modalEl') // game over  
+const modalScoreEl = document.querySelector('#modalScoreEl') // final points
+const buttonEl = document.querySelector('#buttonEl') //restart game
+const startButtonEl = document.querySelector('#startButtonEl')  
+const startModalEl = document.querySelector('#startModalEl') // game start
+
 canvas.width = innerWidth
 canvas.height = innerHeight
 
-const scoreEl = document.querySelector('#scoreEl')
-const startGameBtn = document.querySelector('#startGameBtn')
-const modalEl = document.querySelector('#modalEl')
-const bigScoreEl = document.querySelector('#bigScoreEl')
-
-const scene = {
-  active: false
-}
+const x = canvas.width / 2
+const y = canvas.height / 2
 
 class Player {
   constructor(x, y, radius, color) {
@@ -25,8 +26,7 @@ class Player {
       x: 0,
       y: 0
     }
-    this.friction = 0.99
-    this.powerUp = ''
+    this.powerUp
   }
 
   draw() {
@@ -38,38 +38,31 @@ class Player {
 
   update() {
     this.draw()
-    this.velocity.x *= this.friction
-    this.velocity.y *= this.friction
 
+    const friction = 0.99
+
+    this.velocity.x *= friction
+    this.velocity.y *= friction
+
+    // collision detection for x axis
     if (
-      this.x - this.radius + this.velocity.x > 0 &&
-      this.x + this.radius + this.velocity.x < canvas.width
+      this.x + this.radius + this.velocity.x <= canvas.width &&
+      this.x - this.radius + this.velocity.x >= 0
     ) {
-      this.x = this.x + this.velocity.x
+      this.x += this.velocity.x
     } else {
       this.velocity.x = 0
     }
 
+    // collision detection for y axis
     if (
-      this.y - this.radius + this.velocity.y > 0 &&
-      this.y + this.radius + this.velocity.y < canvas.height
+      this.y + this.radius + this.velocity.y <= canvas.height &&
+      this.y - this.radius + this.velocity.y >= 0
     ) {
-      this.y = this.y + this.velocity.y
+      this.y += this.velocity.y
     } else {
       this.velocity.y = 0
     }
-    this.x = this.x + this.velocity.x
-    this.y = this.y + this.velocity.y
-  }
-
-  shoot(mouse, color = 'white') {
-    const angle = Math.atan2(mouse.y - this.y, mouse.x - this.x)
-    const velocity = {
-      x: Math.cos(angle) * 5,
-      y: Math.sin(angle) * 5
-    }
-    projectiles.push(new Projectile(this.x, this.y, 5, color, velocity))
-
   }
 }
 
@@ -96,36 +89,6 @@ class Projectile {
   }
 }
 
-const powerUpImg = new Image()
-powerUpImg.src = 'https://github.com/chriscourses/HTML5-Canvas-and-JavaScript-Games-for-Beginners/blob/main/img/lightning.png?raw=true'
-
-class PowerUp {
-  constructor(x, y, velocity) {
-    this.x = x
-    this.y = y
-    this.velocity = velocity
-    this.width = 14
-    this.height = 18
-    this.radians = 0
-  }
-
-  draw() {
-    c.save()
-    c.translate(this.x + this.width / 2, this.y + this.height / 2)
-    c.rotate(this.radians)
-    c.translate(-this.x - this.width / 2, -this.y - this.height / 2)
-    c.drawImage(powerUpImg, this.x, this.y, 14, 18)
-    c.restore()
-  }
-
-  update() {
-    this.radians += 0.002
-    this.draw()
-    this.x = this.x + this.velocity.x
-    this.y = this.y + this.velocity.y
-  }
-}
-
 class Enemy {
   constructor(x, y, radius, color, velocity) {
     this.x = x
@@ -133,22 +96,21 @@ class Enemy {
     this.radius = radius
     this.color = color
     this.velocity = velocity
-    this.type = 'linear'
+    this.type = 'Linear'
+    this.radians = 0
     this.center = {
       x,
       y
     }
 
-    this.radians = 0
-
-    if (Math.random() < 0.25) {
-      this.type = 'homing'
+    if (Math.random() < 0.5) {
+      this.type = 'Homing'
 
       if (Math.random() < 0.5) {
-        this.type = 'spinning'
+        this.type = 'Spinning'
 
-        if (Math.random() < 0.75) {
-          this.type = 'homingSpinning'
+        if (Math.random() < 0.5) {
+          this.type = 'Homing Spinning'
         }
       }
     }
@@ -164,40 +126,40 @@ class Enemy {
   update() {
     this.draw()
 
-    if (this.type === 'linear') {
-      this.x = this.x + this.velocity.x
-      this.y = this.y + this.velocity.y
-    } else if (this.type === 'homing') {
-      const angle = Math.atan2(player.y - this.y, player.x - this.x)
+    if (this.type === 'Spinning') {
+      this.radians += 0.1
 
-      this.velocity = {
-        x: Math.cos(angle),
-        y: Math.sin(angle)
-      }
-
-      this.x = this.x + this.velocity.x
-      this.y = this.y + this.velocity.y
-    } else if (this.type === 'spinning') {
-      this.radians += 0.05
       this.center.x += this.velocity.x
       this.center.y += this.velocity.y
 
-      this.x = this.center.x + Math.cos(this.radians) * 100
-      this.y = this.center.y + Math.sin(this.radians) * 100
-    } else if (this.type === 'homingSpinning') {
+      this.x = this.center.x + Math.cos(this.radians) * 30
+      this.y = this.center.y + Math.sin(this.radians) * 30
+    } else if (this.type === 'Homing') {
       const angle = Math.atan2(player.y - this.y, player.x - this.x)
+      this.velocity.x = Math.cos(angle)
+      this.velocity.y = Math.sin(angle)
 
-      this.velocity = {
-        x: Math.cos(angle),
-        y: Math.sin(angle)
-      }
+      this.x = this.x + this.velocity.x
+      this.y = this.y + this.velocity.y
+    } else if (this.type === 'Homing Spinning') {
+      this.radians += 0.1
 
-      this.radians += 0.05
+      const angle = Math.atan2(
+        player.y - this.center.y,
+        player.x - this.center.x
+      )
+      this.velocity.x = Math.cos(angle)
+      this.velocity.y = Math.sin(angle)
+
       this.center.x += this.velocity.x
       this.center.y += this.velocity.y
 
-      this.x = this.center.x + Math.cos(this.radians) * 100
-      this.y = this.center.y + Math.sin(this.radians) * 100
+      this.x = this.center.x + Math.cos(this.radians) * 30
+      this.y = this.center.y + Math.sin(this.radians) * 30
+    } else {
+      // linear movement
+      this.x = this.x + this.velocity.x
+      this.y = this.y + this.velocity.y
     }
   }
 }
@@ -234,242 +196,300 @@ class Particle {
 }
 
 class BackgroundParticle {
-  constructor(x, y, radius, color) {
-    this.x = x
-    this.y = y
+  constructor({ position, radius = 3, color = 'blue' }) {
+    this.position = position
     this.radius = radius
     this.color = color
-    this.alpha = 0.05
-    this.initialAlpha = this.alpha
+    this.alpha = 0.1
   }
 
   draw() {
     c.save()
     c.globalAlpha = this.alpha
     c.beginPath()
-    c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false)
+    c.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2)
     c.fillStyle = this.color
     c.fill()
+    c.restore()
+  }
+}
+
+// const powerUp = new PowerUp({y: 100, x: 100,  velocity: { x: 0, y: 0 }})
+
+class PowerUp {
+  constructor({ position = { x: 0, y: 0 }, velocity }) {
+    this.position = position
+    this.velocity = velocity
+
+    this.image = new Image()
+    this.image.src = 'https://github.com/chriscourses/HTML5-Canvas-and-JavaScript-Games-for-Beginners/blob/main/img/lightning.png?raw=true'
+
+    this.alpha = 1
+    gsap.to(this, {
+      alpha: 0,
+      duration: 0.2,
+      repeat: -1,
+      yoyo: true,
+      ease: 'linear'
+    })
+
+    this.radians = 0
+  }
+
+  draw() {
+    c.save()
+    c.globalAlpha = this.alpha
+    c.translate(
+      this.position.x + this.image.width / 2,
+      this.position.y + this.image.height / 2
+    )
+    c.rotate(this.radians)
+    c.translate(
+      -this.position.x - this.image.width / 2,
+      -this.position.y - this.image.height / 2
+    )
+    c.drawImage(this.image, this.position.x, this.position.y)
     c.restore()
   }
 
   update() {
     this.draw()
-    // this.alpha -= 0.01
+    this.radians += 0.01
+    this.position.x += this.velocity.x
   }
 }
 
-let player
-let powerUps = []
+
+
+// classes ends , logic 
+
+let player = new Player(x, y, 10, 'white')
 let projectiles = []
 let enemies = []
 let particles = []
+let animationId
+let intervalId
+let score = 0
+let powerUps = []
+let frames = 0
 let backgroundParticles = []
 
 function init() {
-  const x = canvas.width / 2
-  const y = canvas.height / 2
   player = new Player(x, y, 10, 'white')
-  powerUps = []
   projectiles = []
   enemies = []
   particles = []
+  powerUps = []
+  animationId
+  score = 0
+  scoreEl.innerHTML = 0
+  frames = 0
   backgroundParticles = []
 
-  for (let x = 0; x < canvas.width; x += 30) {
-    for (let y = 0; y < canvas.height; y += 30) {
-      backgroundParticles.push(new BackgroundParticle(x, y, 3, 'blue'))
+  const spacing = 30
+
+  for (let x = 0; x < canvas.width + spacing; x += spacing) {
+    for (let y = 0; y < canvas.height + spacing; y += spacing) {
+      backgroundParticles.push(
+        new BackgroundParticle({
+          position: {
+            x,
+            y
+          },
+          radius: 3
+        })
+      )
     }
   }
 }
 
 function spawnEnemies() {
-  const radius = Math.random() * (30 - 4) + 4
+  intervalId = setInterval(() => {
+    const radius = Math.random() * (30 - 4) + 4
 
-  let x
-  let y
+    let x
+    let y
 
-  if (Math.random() < 0.5) {
-    x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius
-    y = Math.random() * canvas.height
-  } else {
-    x = Math.random() * canvas.width
-    y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius
-  }
+    if (Math.random() < 0.5) {
+      x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius
+      y = Math.random() * canvas.height
+    } else {
+      x = Math.random() * canvas.width
+      y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius
+    }
 
-  const color = `hsl(${Math.random() * 360}, 50%, 50%)`
+    const color = `hsl(${Math.random() * 360}, 50%, 50%)`
 
-  const angle = Math.atan2(canvas.height / 2 - y, canvas.width / 2 - x)
+    const angle = Math.atan2(canvas.height / 2 - y, canvas.width / 2 - x)
 
-  const velocity = {
-    x: Math.cos(angle),
-    y: Math.sin(angle)
-  }
+    const velocity = {
+      x: Math.cos(angle),
+      y: Math.sin(angle)
+    }
 
-  enemies.push(new Enemy(x, y, radius, color, velocity))
+    enemies.push(new Enemy(x, y, radius, color, velocity))
+  }, 1000)
 }
 
 function spawnPowerUps() {
-  let x
-  let y
-
-  if (Math.random() < 0.5) {
-    x = Math.random() < 0.5 ? 0 - 7 : canvas.width + 7
-    y = Math.random() * canvas.height
-  } else {
-    x = Math.random() * canvas.width
-    y = Math.random() < 0.5 ? 0 - 9 : canvas.height + 9
-  }
-
-  const angle = Math.atan2(canvas.height / 2 - y, canvas.width / 2 - x)
-
-  const velocity = {
-    x: Math.cos(angle),
-    y: Math.sin(angle)
-  }
-
-  powerUps.push(new PowerUp(x, y, velocity))
+  spawnPowerUpsId = setInterval(() => {
+    powerUps.push(
+      new PowerUp({
+        position: {
+          x: -30,
+          y: Math.random() * canvas.height
+        },
+        velocity: {
+          x: Math.random() + 2,
+          y: 0
+        }
+      })
+    )
+  }, 10000)
 }
 
-function createScoreLabel(projectile, score) {
-  const scoreLabel = document.createElement('label')
-  scoreLabel.innerHTML = score
-  scoreLabel.style.position = 'absolute'
-  scoreLabel.style.color = 'white'
-  scoreLabel.style.userSelect = 'none'
-  scoreLabel.style.left = projectile.x + 'px'
-  scoreLabel.style.top = projectile.y + 'px'
-  document.body.appendChild(scoreLabel)
-
-  gsap.to(scoreLabel, {
-    opacity: 0,
-    y: -30,
-    duration: 0.75,
-    onComplete: () => {
-      scoreLabel.parentNode.removeChild(scoreLabel)
-    }
-  })
-}
-
-let animationId
-let score = 0
-let frame = 0
 function animate() {
   animationId = requestAnimationFrame(animate)
-  frame++
   c.fillStyle = 'rgba(0, 0, 0, 0.1)'
   c.fillRect(0, 0, canvas.width, canvas.height)
+  frames++
 
-  if (frame % 70 === 0) spawnEnemies()
-  if (frame % 300 === 0) spawnPowerUps()
-
+  // 1-background -particles
   backgroundParticles.forEach((backgroundParticle) => {
+    backgroundParticle.draw()
+
     const dist = Math.hypot(
-      player.x - backgroundParticle.x,
-      player.y - backgroundParticle.y
+      player.x - backgroundParticle.position.x,
+      player.y - backgroundParticle.position.y
     )
 
-    const hideRadius = 100
-    if (dist < hideRadius) {
-      if (dist < 70) {
-        backgroundParticle.alpha = 0
-      } else {
+    if (dist < 100) {
+      backgroundParticle.alpha = 0
+
+      if (dist > 70) {
         backgroundParticle.alpha = 0.5
       }
-    } else if (
-      dist >= hideRadius &&
-      backgroundParticle.alpha < backgroundParticle.initialAlpha
-    ) {
+    } else if (dist > 100 && backgroundParticle.alpha < 0.1) {
       backgroundParticle.alpha += 0.01
-    } else if (
-      dist >= hideRadius &&
-      backgroundParticle.alpha > backgroundParticle.initialAlpha
-    ) {
+    } else if (dist > 100 && backgroundParticle.alpha > 0.1) {
       backgroundParticle.alpha -= 0.01
     }
-
-    backgroundParticle.update()
   })
 
+   // 2- player
   player.update()
-  particles.forEach((particle, index) => {
+
+  //3- power-up
+  for (let i = powerUps.length - 1; i >= 0; i--) {
+    const powerUp = powerUps[i]
+
+    if (powerUp.position.x > canvas.width) {
+      powerUps.splice(i, 1)
+    } else powerUp.update()
+
+    const dist = Math.hypot(
+      player.x - powerUp.position.x,
+      player.y - powerUp.position.y
+    )
+
+    // gain power up
+    if (dist < powerUp.image.height / 2 + player.radius) {
+      powerUps.splice(i, 1)
+      player.powerUp = 'MachineGun'
+      player.color = 'yellow'
+
+      // power up runs out
+      setTimeout(() => {
+        player.powerUp = null
+        player.color = 'white'
+      }, 5000)
+    }
+  }
+
+  // machine gun animation / implementation
+  if (player.powerUp === 'MachineGun') {
+    const angle = Math.atan2(
+      mouse.position.y - player.y,
+      mouse.position.x - player.x
+    )
+    const velocity = {
+      x: Math.cos(angle) * 5,
+      y: Math.sin(angle) * 5
+    }
+
+    if (frames % 2 === 0)
+      projectiles.push(
+        new Projectile(player.x, player.y, 5, 'yellow', velocity)
+      )
+  }
+
+
+  //4- particles
+  for (let index = particles.length - 1; index >= 0; index--) {
+    const particle = particles[index]
+
     if (particle.alpha <= 0) {
       particles.splice(index, 1)
     } else {
       particle.update()
     }
-  })
-
-  if (player.powerUp === 'Automatic' && mouse.down) {
-    if (frame % 4 === 0) {
-      player.shoot(mouse, '#FFF500')
-    }
   }
 
-  powerUps.forEach((powerUp, index) => {
-    const dist = Math.hypot(player.x - powerUp.x, player.y - powerUp.y)
 
-    // obtain power up
-    // gain the automatic shooting ability
-    if (dist - player.radius - powerUp.width / 2 < 1) {
-      player.color = '#FFF500'
-      player.powerUp = 'Automatic'
-      powerUps.splice(index, 1)
+//5- projectiles
+  for (let index = projectiles.length - 1; index >= 0; index--) {
+    const projectile = projectiles[index]
 
-      //obtainPowerUpAudio.play()
-
-      setTimeout(() => {
-        player.powerUp = null
-        player.color = '#FFFFFF'
-      }, 5000)
-    } else {
-      powerUp.update()
-    }
-  })
-
-  projectiles.forEach((projectile, index) => {
     projectile.update()
 
     // remove from edges of screen
     if (
-      projectile.x + projectile.radius < 0 ||
+      projectile.x - projectile.radius < 0 ||
       projectile.x - projectile.radius > canvas.width ||
       projectile.y + projectile.radius < 0 ||
       projectile.y - projectile.radius > canvas.height
     ) {
-      setTimeout(() => {
-        projectiles.splice(index, 1)
-      }, 0)
+      projectiles.splice(index, 1)
     }
-  })
+  }
 
-  enemies.forEach((enemy, index) => {
+  // 6- enemies
+  for (let index = enemies.length - 1; index >= 0; index--) {
+    const enemy = enemies[index]
+
     enemy.update()
 
     const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y)
 
-    // end game
+    //7 -end game
     if (dist - enemy.radius - player.radius < 1) {
       cancelAnimationFrame(animationId)
-      modalEl.style.display = 'flex'
-      bigScoreEl.innerHTML = score
-     // endGameAudio.play()
-      scene.active = false
+      clearInterval(intervalId)
 
-      gsap.to('#whiteModalEl', {
-        opacity: 1,
-        scale: 1,
-        duration: 0.45,
-        ease: 'expo'
-      })
+      modalEl.style.display = 'block'
+      gsap.fromTo(
+        '#modalEl',
+        { scale: 0.8, opacity: 0 },
+        {
+          scale: 1,
+          opacity: 1,
+          ease: 'expo'
+        }
+      )
+      modalScoreEl.innerHTML = score
     }
+//8 - projectile  collide with enemy
+    for (
+      let projectilesIndex = projectiles.length - 1;
+      projectilesIndex >= 0;
+      projectilesIndex--
+    ) {
+      const projectile = projectiles[projectilesIndex]
 
-    projectiles.forEach((projectile, projectileIndex) => {
       const dist = Math.hypot(projectile.x - enemy.x, projectile.y - enemy.y)
 
-      // hit enemy
       // when projectiles touch enemy
-      if (dist - enemy.radius - projectile.radius < 0.03) {
+      if (dist - enemy.radius - projectile.radius < 1) {
         // create explosions
         for (let i = 0; i < enemy.radius * 2; i++) {
           particles.push(
@@ -485,131 +505,70 @@ function animate() {
             )
           )
         }
-
-        // shrink enemy
-        if (enemy.radius - 10 > 5) {
-          //enemyHitAudio.play()
-
-          // increase our score
+        // this is where we shrink our enemy
+        if (enemy.radius > 15) {
           score += 100
           scoreEl.innerHTML = score
-
-          createScoreLabel(projectile, 100)
-
           gsap.to(enemy, {
             radius: enemy.radius - 10
           })
-          setTimeout(() => {
-            projectiles.splice(projectileIndex, 1)
-          }, 0)
+          projectiles.splice(projectilesIndex, 1)
         } else {
-          // eliminate enemy
-        //  enemyEliminatedAudio.play()
-
-          // remove from scene altogether
-          score += 250
+          // remove enemy if they are too small
+          score += 150
           scoreEl.innerHTML = score
-          createScoreLabel(projectile, 250)
 
-          // change backgroundParticle colors
+          // change background particle colors
           backgroundParticles.forEach((backgroundParticle) => {
-            backgroundParticle.color = enemy.color
-            gsap.to(backgroundParticle, {
-              alpha: 0.5,
-              duration: 0.015,
-              onComplete: () => {
-                gsap.to(backgroundParticle, {
-                  alpha: backgroundParticle.initialAlpha,
-                  duration: 0.03
-                })
-              }
+            gsap.set(backgroundParticle, {
+              color: 'white',
+              alpha: 1
             })
+            gsap.to(backgroundParticle, {
+              color: enemy.color,
+              alpha: 0.1
+            })
+            // backgroundParticle.color = enemy.color
           })
 
-          setTimeout(() => {
-            const enemyFound = enemies.find((enemyValue) => {
-              return enemyValue === enemy
-            })
-
-            if (enemyFound) {
-              enemies.splice(index, 1)
-              projectiles.splice(projectileIndex, 1)
-            }
-          }, 0)
+          enemies.splice(index, 1)
+          projectiles.splice(projectilesIndex, 1)
         }
       }
-    })
-  })
+    }
+  }
 }
+
+addEventListener('click', (event) => {
+  const angle = Math.atan2(event.clientY - player.y, event.clientX - player.x)
+  const velocity = {
+    x: Math.cos(angle) * 5,
+    y: Math.sin(angle) * 5
+  }
+  projectiles.push(new Projectile(player.x, player.y, 5, 'white', velocity))
+})
 
 const mouse = {
-  down: false,
-  x: undefined,
-  y: undefined
-}
-
-addEventListener('mousedown', ({ clientX, clientY }) => {
-  mouse.x = clientX
-  mouse.y = clientY
-
-  mouse.down = true
-})
-
-addEventListener('mousemove', ({ clientX, clientY }) => {
-  mouse.x = clientX
-  mouse.y = clientY
-})
-
-addEventListener('mouseup', () => {
-  mouse.down = false
-})
-
-addEventListener('touchstart', (event) => {
-  mouse.x = event.touches[0].clientX
-  mouse.y = event.touches[0].clientY
-
-  mouse.down = true
-})
-
-addEventListener('touchmove', (event) => {
-  mouse.x = event.touches[0].clientX
-  mouse.y = event.touches[0].clientY
-})
-
-addEventListener('touchend', () => {
-  mouse.down = false
-})
-
-addEventListener('click', ({ clientX, clientY }) => {
-  if (scene.active && player.powerUp !== 'Automatic') {
-    mouse.x = clientX
-    mouse.y = clientY
-    player.shoot(mouse)
+  position: {
+    x: 0,
+    y: 0
   }
+}
+addEventListener('mousemove', (event) => {
+  mouse.position.x = event.clientX
+  mouse.position.y = event.clientY
 })
 
-addEventListener('resize', () => {
-  canvas.width = innerWidth
-  canvas.height = innerHeight
-
-  init()
-})
-
-startGameBtn.addEventListener('click', () => {
+// restart game
+buttonEl.addEventListener('click', () => {
   init()
   animate()
- // startGameAudio.play()
-  scene.active = true
-
-  score = 0
-  scoreEl.innerHTML = score
-  bigScoreEl.innerHTML = score
- // backgroundMusicAudio.play()
-
-  gsap.to('#whiteModalEl', {
+  spawnEnemies()
+  spawnPowerUps()
+  gsap.to('#modalEl', {
     opacity: 0,
-    scale: 0.75,
-    duration: 0.25,
+    scale: 0.8,
+    duration: 0.2,
     ease: 'expo.in',
     onComplete: () => {
       modalEl.style.display = 'none'
@@ -617,30 +576,38 @@ startGameBtn.addEventListener('click', () => {
   })
 })
 
-addEventListener('keydown', ({ keyCode }) => {
-  if (keyCode === 87) {
-    player.velocity.y -= 1
-  } else if (keyCode === 65) {
-    player.velocity.x -= 1
-  } else if (keyCode === 83) {
-    player.velocity.y += 1
-  } else if (keyCode === 68) {
-    player.velocity.x += 1
-  }
 
-  switch (keyCode) {
-    case 37:
-      player.velocity.x -= 1
-      break
-    case 40:
-      player.velocity.y += 1
-      break
-    case 39:
+// start game
+startButtonEl.addEventListener('click', () => {
+  init()
+  animate()
+  spawnEnemies()
+  spawnPowerUps()
+  // startModalEl.style.display = 'none'
+  gsap.to('#startModalEl', {
+    opacity: 0,
+    scale: 0.8,
+    duration: 0.2,
+    ease: 'expo.in',
+    onComplete: () => {
+      startModalEl.style.display = 'none'
+    }
+  })
+})
+
+window.addEventListener('keydown', (event) => {
+  switch (event.key) {
+    case 'ArrowRight':
       player.velocity.x += 1
       break
-    case 38:
+    case 'ArrowUp':
       player.velocity.y -= 1
+      break
+    case 'ArrowLeft':
+      player.velocity.x -= 1
+      break
+    case 'ArrowDown':
+      player.velocity.y += 1
       break
   }
 })
-
