@@ -222,7 +222,7 @@ class PowerUp {
     this.velocity = velocity
 
     this.image = new Image()
-    this.image.src = 'https://github.com/chriscourses/HTML5-Canvas-and-JavaScript-Games-for-Beginners/blob/main/img/lightning.png?raw=true'
+    this.image.src = ''
 
     this.alpha = 1
     gsap.to(this, {
